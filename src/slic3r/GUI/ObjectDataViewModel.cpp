@@ -1052,16 +1052,16 @@ wxDataViewItem ObjectDataViewModel::Delete(const wxDataViewItem &item)
         ObjectDataViewModelNode* last_instance_node = node_parent->GetNthChild(0);
         PrintIndicator last_instance_printable = last_instance_node->IsPrintable();
         node_parent->GetChildren().Remove(last_instance_node);
+        // Wrapped before the delete because GCC's -Wuse-after-free flags reading a freed pointer.
+        const wxDataViewItem last_instance_item(last_instance_node);
         delete last_instance_node;
-        // `delete` before `ItemDeleted()` is valid wxWidget pattern
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wuse-after-free"
-        ItemDeleted(parent, wxDataViewItem(last_instance_node));
-#pragma GCC diagnostic pop
+        ItemDeleted(parent, last_instance_item);
 
         ObjectDataViewModelNode* obj_node = node_parent->GetParent();
         obj_node->set_printable_icon(last_instance_printable);
         obj_node->GetChildren().Remove(node_parent);
+        // Wrapped before the delete because GCC's -Wuse-after-free flags reading a freed pointer.
+        const wxDataViewItem node_parent_item(node_parent);
         delete node_parent;
         ret_item = wxDataViewItem(obj_node);
 
@@ -1069,11 +1069,7 @@ wxDataViewItem ObjectDataViewModel::Delete(const wxDataViewItem &item)
         if (obj_node->GetChildCount() == 0)
             obj_node->m_container = false;
 #endif //__WXGTK__
-       // `delete` before `ItemDeleted()` is valid wxWidget pattern
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wuse-after-free"
-        ItemDeleted(ret_item, wxDataViewItem(node_parent));
-#pragma GCC diagnostic pop
+        ItemDeleted(ret_item, node_parent_item);
         return ret_item;
     }
 
@@ -1085,6 +1081,8 @@ wxDataViewItem ObjectDataViewModel::Delete(const wxDataViewItem &item)
     {
         ObjectDataViewModelNode* obj_node = node_parent->GetParent();
         obj_node->GetChildren().Remove(node_parent);
+        // Wrapped before the delete because GCC's -Wuse-after-free flags reading a freed pointer.
+        const wxDataViewItem node_parent_item(node_parent);
         delete node_parent;
         ret_item = wxDataViewItem(obj_node);
 
@@ -1092,10 +1090,7 @@ wxDataViewItem ObjectDataViewModel::Delete(const wxDataViewItem &item)
         if (obj_node->GetChildCount() == 0)
             obj_node->m_container = false;
 #endif //__WXGTK__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wuse-after-free"
-        ItemDeleted(ret_item, wxDataViewItem(node_parent));
-#pragma GCC diagnostic pop
+        ItemDeleted(ret_item, node_parent_item);
         return ret_item;
     }
 
